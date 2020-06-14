@@ -1,4 +1,7 @@
 use std::env;
+use iced::{Sandbox, Settings};
+
+mod gui;
 
 fn list_files_in_directory(directory: &std::path::PathBuf ) -> std::io::Result<std::fs::ReadDir> {
     directory.as_path().read_dir()
@@ -15,6 +18,8 @@ fn main() -> std::io::Result<()> {
             println!("ERR");
         }
     }
+
+    gui::SamplexApp::run(Settings::default());
 
     Ok(())
 }
