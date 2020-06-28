@@ -69,6 +69,14 @@ impl AudioFile {
             }
         )
     }
+
+    pub fn get_full_path(&self) -> &PathBuf {
+        &self.filename
+    }
+
+    pub fn get_encoding(&self) -> &AudioEncoding {
+        &self.encoding
+    }
 }
 
 struct AudioFileIterator {
