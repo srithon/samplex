@@ -145,7 +145,7 @@ impl AudioPlayer {
         Ok(AudioPlayer {
             sink,
             // output_device
-            current_source: None
+            // current_source: None
         })
     }
 
