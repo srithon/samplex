@@ -1,5 +1,5 @@
 use iced::{
-    button, Button, Align, Column, Element, Row, Sandbox, Text
+    button, Button, Align, Column, Element, Row, Sandbox, scrollable, Scrollable, Text
 };
 
 use std::path::PathBuf;
@@ -16,6 +16,7 @@ use crate::util::*;
 pub struct SamplexApp {
     audio_files: Vec<Arc<AudioFile>>,
     file_buttons: Vec<button::State>,
+    scroll_bar_state: scrollable::State,
     audio_player: AudioPlayer
 }
 
@@ -48,12 +49,15 @@ impl Sandbox for SamplexApp {
                 (0..num_files).map(|_i| { button::State::new() }).collect()
         };
 
+        let scroll_bar_state = scrollable::State::new();
+
         // <<TODO>>
         let audio_player = AudioPlayer::new().unwrap();
 
         SamplexApp {
             audio_files,
             file_buttons,
+            scroll_bar_state,
             audio_player
         }
     }
@@ -81,10 +85,13 @@ impl Sandbox for SamplexApp {
             }).collect::<Vec<_>>();
 
             let column = Column::with_children(buttons)
-                .padding(20)
-                .align_items(Align::Center);
+                .padding(20);
+                // .align_items(Align::Center);
 
-            column
+            let scrollbar = Scrollable::<Self::Message>::new(&mut self.scroll_bar_state)
+                .push(column);
+
+            scrollbar
         };
 
         Row::new()
