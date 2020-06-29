@@ -11,6 +11,7 @@ use std::path::{PathBuf, Path};
 
 use std::sync::Arc;
 
+fn play_files_in_current_directory() {
     let mut args = env::args();
     let _ = args.nth(0);
 
@@ -25,10 +26,16 @@ use std::sync::Arc;
                 let wrapped_file = Arc::new(file);
                 player.play_file(wrapped_file.clone());
                 player.block_until_sound_ends();
+                println!("Started sleep...");
+                let sleep_time = std::time::Duration::from_millis(1000);
+                std::thread::sleep(sleep_time);
             }
         }
     }
+}
 
+fn main() -> std::io::Result<()> {
+    gui::SamplexApp::run(Settings::default());
 
     Ok(())
 }
