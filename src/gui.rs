@@ -10,6 +10,8 @@ use std::io::Result;
 
 use std::sync::Arc;
 
+use rayon::prelude::*;
+
 use crate::audio::{AudioFile, AudioPlayer};
 use crate::util::*;
 
@@ -33,7 +35,7 @@ impl Sandbox for SamplexApp {
         let files = list_filenames_in_current_directory().unwrap_or_else(|_i| Vec::new());
 
         let audio_files: Vec<Arc<AudioFile>> = {
-            files.iter().filter_map(| filename | {
+            files.par_iter().filter_map(| filename | {
                 let audio_file = AudioFile::from_path(PathBuf::from(filename));
                 if let Ok(audio_file) = audio_file {
                     Some(Arc::new(audio_file))
