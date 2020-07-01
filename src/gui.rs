@@ -40,7 +40,11 @@ pub enum Message {
 impl SamplexApp {
     fn get_current_state() -> ColumnState {
         // <<NOTE>> what is the argument passed into the closure?
-        let files = list_current_directory_contents().unwrap_or_else(|_i| Vec::new());
+        let files = {
+            let mut contents = list_current_directory_contents().unwrap_or_else(|_i| Vec::new());
+            contents.insert(0, FileType::Directory("..".to_string()));
+            contents
+        };
 
         let num_files = files.len();
 
