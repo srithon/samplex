@@ -47,9 +47,11 @@ impl Sandbox for SamplexApp {
                 match entry_name {
                     FileType::File(filename) => {
                         (|| {
-                            let audio_file = AudioFile::from_path(PathBuf::from(filename)).ok();
-                            if let Some(audio_file) = audio_file {
-                                return Some(ListEntry::Playable(Arc::new(audio_file)));
+                            if !filename.starts_with('.') {
+                                let audio_file = AudioFile::from_path(PathBuf::from(filename)).ok();
+                                if let Some(audio_file) = audio_file {
+                                    return Some(ListEntry::Playable(Arc::new(audio_file)));
+                                }
                             }
 
                             return None;
