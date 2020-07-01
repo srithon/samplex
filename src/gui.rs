@@ -15,8 +15,14 @@ use rayon::prelude::*;
 use crate::audio::{AudioFile, AudioPlayer};
 use crate::util::*;
 
+enum ListEntry {
+    Playable(Arc<AudioFile>),
+    Directory(String),
+}
+
 pub struct SamplexApp {
-    audio_files: Vec<Arc<AudioFile>>,
+    // each element is either an AudioFile or a directory
+    directory_contents: Vec<ListEntry>,
     file_buttons: Vec<button::State>,
     scroll_bar_state: scrollable::State,
     audio_player: AudioPlayer
@@ -32,24 +38,31 @@ impl Sandbox for SamplexApp {
 
     fn new() -> SamplexApp {
         // <<NOTE>> what is the argument passed into the closure?
-        let files = list_filenames_in_current_directory().unwrap_or_else(|_i| Vec::new());
+        let files = list_current_directory_contents().unwrap_or_else(|_i| Vec::new());
 
-        let audio_files: Vec<Arc<AudioFile>> = {
-            files.par_iter().filter_map(| filename | {
-                let audio_file = AudioFile::from_path(PathBuf::from(filename));
-                if let Ok(audio_file) = audio_file {
-                    Some(Arc::new(audio_file))
-                }
-                else {
-                    None
+        let num_files = files.len();
+
+        let directory_contents: Vec<ListEntry> = {
+            files.into_par_iter().filter_map(| entry_name | {
+                match entry_name {
+                    FileType::File(filename) => {
+                        (|| {
+                            let audio_file = AudioFile::from_path(PathBuf::from(filename)).ok();
+                            if let Some(audio_file) = audio_file {
+                                return Some(ListEntry::Playable(Arc::new(audio_file)));
+                            }
+
+                            return None;
+                        })()
+                    },
+                    FileType::Directory(directory_name) => Some(ListEntry::Directory(directory_name))
                 }
             }).collect()
         };
 
-        let file_buttons: Vec<button::State> = {
-                let num_files = files.len();
-                (0..num_files).map(|_i| { button::State::new() }).collect()
-        };
+        let file_buttons: Vec<button::State> = (0..num_files).map(|_i| {
+            button::State::new()
+        }).collect();
 
         let scroll_bar_state = scrollable::State::new();
 
@@ -57,7 +70,7 @@ impl Sandbox for SamplexApp {
         let audio_player = AudioPlayer::new().unwrap();
 
         SamplexApp {
-            audio_files,
+            directory_contents,
             file_buttons,
             scroll_bar_state,
             audio_player
@@ -74,16 +87,28 @@ impl Sandbox for SamplexApp {
                 // no reason to waste extra memory just to save this cast
                 // this operation is too infrequent to justify it being
                 //  a usize to begin with
-                let audio_file = self.audio_files[audio_file_index as usize].clone();
-                self.audio_player.play_file(audio_file);
+                let audio_file = &self.directory_contents[audio_file_index as usize];
+
+                match audio_file {
+                    ListEntry::Directory(dir_name) => {
+                        // change directory, read new files
+                        println!("Just clicked on {}", dir_name);
+                    },
+                    ListEntry::Playable(audio_file) => self.audio_player.play_file(audio_file.clone())
+                };
             }
         }
     }
 
     fn view(&mut self) -> Element<Message> {
         let audio_files_column = {
-            let buttons = self.file_buttons.iter_mut().zip(self.audio_files.iter()).enumerate().map(|(index, (button_state, audio_file))| {
-                Button::new(button_state, Text::new(audio_file.get_full_path().file_name().unwrap().to_os_string().into_string().unwrap())).on_press(Message::FileSelected(index as u32)).into()
+            let buttons = self.file_buttons.iter_mut().zip(self.directory_contents.iter()).enumerate().map(|(index, (button_state, audio_file))| {
+                let file_name = match &audio_file {
+                    ListEntry::Directory(dir_name) => dir_name.to_owned(),
+                    ListEntry::Playable(audio_file) => audio_file.get_full_path().file_name().unwrap().to_os_string().into_string().unwrap()
+                };
+
+                Button::new(button_state, Text::new(file_name)).on_press(Message::FileSelected(index as u32)).into()
             }).collect::<Vec<_>>();
 
             let column = Column::with_children(buttons)
