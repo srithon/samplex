@@ -52,7 +52,17 @@ impl AudioFile {
         println!("Sample Rate: {}", sample_rate);
         println!("Num Channels: {}", num_channels);
 
-        let samples_vector: Vec<BitDepth> = samples.collect();
+        let samples_vector = {
+            // tested number of silent samples that guaranteed no clipping in sounds
+            let num_silent_samples = 500;
+            // <<CONSIDER>> use static buffer to serve as silence for all audiofiles?
+            //              consider a wrapper around Vec that allows a static buffer to
+            //              be used in the beginning
+            let mut silence_padding: Vec<BitDepth> = vec![0; num_silent_samples];
+            let samples_vector: Vec<BitDepth> = samples.collect();
+            silence_padding.extend(samples_vector);
+            silence_padding
+        };
 
         println!("Finished collecting vector ({}): {}", filename.file_name().unwrap().to_string_lossy().to_owned(), samples_vector.len());
 
