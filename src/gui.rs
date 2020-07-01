@@ -20,10 +20,14 @@ enum ListEntry {
     Directory(String),
 }
 
-pub struct SamplexApp {
-    // each element is either an AudioFile or a directory
+struct ColumnState {
     directory_contents: Vec<ListEntry>,
     file_buttons: Vec<button::State>,
+}
+
+pub struct SamplexApp {
+    // each element is either an AudioFile or a directory
+    column_state: ColumnState,
     scroll_bar_state: scrollable::State,
     audio_player: AudioPlayer
 }
@@ -33,10 +37,8 @@ pub enum Message {
     FileSelected(u32)
 }
 
-impl Sandbox for SamplexApp {
-    type Message = Message;
-
-    fn new() -> SamplexApp {
+impl SamplexApp {
+    fn get_current_state() -> ColumnState {
         // <<NOTE>> what is the argument passed into the closure?
         let files = list_current_directory_contents().unwrap_or_else(|_i| Vec::new());
 
@@ -66,14 +68,26 @@ impl Sandbox for SamplexApp {
             button::State::new()
         }).collect();
 
+        ColumnState {
+            directory_contents,
+            file_buttons
+        }
+    }
+}
+
+impl Sandbox for SamplexApp {
+    type Message = Message;
+
+    fn new() -> SamplexApp {
+        let column_state = SamplexApp::get_current_state();
+
         let scroll_bar_state = scrollable::State::new();
 
         // <<TODO>>
         let audio_player = AudioPlayer::new().unwrap();
 
         SamplexApp {
-            directory_contents,
-            file_buttons,
+            column_state,
             scroll_bar_state,
             audio_player
         }
@@ -89,22 +103,39 @@ impl Sandbox for SamplexApp {
                 // no reason to waste extra memory just to save this cast
                 // this operation is too infrequent to justify it being
                 //  a usize to begin with
-                let audio_file = &self.directory_contents[audio_file_index as usize];
+                let audio_file = {
+                    &self.column_state.directory_contents[audio_file_index as usize]
+                };
 
-                match audio_file {
+                let overwrite = match audio_file {
                     ListEntry::Directory(dir_name) => {
                         // change directory, read new files
+                        let current_directory = env::current_dir().unwrap().canonicalize().unwrap();
+                        let new_dir = current_directory.join(PathBuf::from(dir_name));
+                        env::set_current_dir(new_dir).unwrap();
                         println!("Just clicked on {}", dir_name);
+                        true
                     },
-                    ListEntry::Playable(audio_file) => self.audio_player.play_file(audio_file.clone())
+                    ListEntry::Playable(audio_file) => {
+                        self.audio_player.play_file(audio_file.clone());
+                        false
+                    }
                 };
+
+                // satisfies the borrow checker
+                if overwrite {
+                    self.column_state = SamplexApp::get_current_state();
+                }
             }
         }
     }
 
     fn view(&mut self) -> Element<Message> {
         let audio_files_column = {
-            let buttons = self.file_buttons.iter_mut().zip(self.directory_contents.iter()).enumerate().map(|(index, (button_state, audio_file))| {
+            let directory_contents = &self.column_state.directory_contents;
+            let file_buttons = &mut self.column_state.file_buttons;
+
+            let buttons = file_buttons.iter_mut().zip(directory_contents.iter()).enumerate().map(|(index, (button_state, audio_file))| {
                 let file_name = match &audio_file {
                     ListEntry::Directory(dir_name) => dir_name.to_owned(),
                     ListEntry::Playable(audio_file) => audio_file.get_full_path().file_name().unwrap().to_os_string().into_string().unwrap()
