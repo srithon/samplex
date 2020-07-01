@@ -54,7 +54,7 @@ impl AudioFile {
 
         let samples_vector: Vec<BitDepth> = samples.collect();
 
-        println!("Finished collecting vector: {}", samples_vector.len());
+        println!("Finished collecting vector ({}): {}", filename.file_name().unwrap().to_string_lossy().to_owned(), samples_vector.len());
 
         let encoding = AudioEncoding {
             sample_rate,
