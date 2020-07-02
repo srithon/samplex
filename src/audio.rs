@@ -24,6 +24,8 @@ use std::process::Command;
 
 type BitDepth = i16;
 
+static mut STOPPED: bool = false;
+
 pub struct AudioFile {
     filename: PathBuf,
     // consider replacing with vector?
@@ -110,6 +112,13 @@ impl Iterator for AudioFileIterator {
     fn next(&mut self) -> Option<Self::Item> {
         self.current_index += 1;
         if self.current_index < self.audio_file.samples.len() {
+            unsafe {
+                if STOPPED {
+                    STOPPED = false;
+                    return None;
+                }
+            }
+
             Some(self.audio_file.samples[self.current_index])
         }
         else {
@@ -181,8 +190,14 @@ impl AudioPlayer {
         self.sink.pause();
     }
 
+    pub fn is_playing(&self) -> bool {
+        !self.sink.empty()
+    }
+
     pub fn stop_playback(&self) {
-        self.sink.stop();
+        unsafe {
+            STOPPED = true;
+        }
     }
 
     pub fn block_until_sound_ends(&self) {

@@ -102,6 +102,11 @@ impl Sandbox for SamplexApp {
     }
 
     fn update(&mut self, message: Self::Message) {
+        if self.audio_player.is_playing() {
+            println!("Audio player is playing! Stopping playback");
+            self.audio_player.stop_playback();
+        }
+
         match message {
             Self::Message::FileSelected(audio_file_index) => {
                 // no reason to waste extra memory just to save this cast
