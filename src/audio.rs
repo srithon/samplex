@@ -89,6 +89,12 @@ impl AudioFile {
     pub fn get_encoding(&self) -> &AudioEncoding {
         &self.encoding
     }
+
+    pub fn get_duration(&self) -> Duration {
+        let sample_rate = &self.get_encoding().sample_rate;
+        let num_samples = &self.samples.len();
+        Duration::from_millis((num_samples * 1000 / *sample_rate as usize) as u64)
+    }
 }
 
 struct AudioFileIterator {
